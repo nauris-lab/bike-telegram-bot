@@ -1,0 +1,26 @@
+# Поисковые запросы для Wallapop — по одному на строку.
+# Строку можно временно отключить, поставив # в начале.
+# Испанский язык обязателен — объявления пишут по-испански.
+#
+# Подобрано под колесо 26″ и выше (подростковый/взрослый размер).
+
+bicicleta 26 pulgadas
+bicicleta montaña 26
+bicicleta mtb 26
+bicicleta btwin 26
+bicicleta rockrider 26
+bicicleta 27,5
+bicicleta junior 26
+bicicleta btt 26
+bici 26
+
+# Если 26″ окажется мало — раскомментируй, станет шире:
+# bicicleta mtb
+# bicicleta montaña
+# bicicleta orbea
+# bicicleta specialized
+
+# Было под маленького ребёнка (16–24″), сейчас не подходит:
+# bicicleta niño
+# bicicleta infantil
+# bicicleta 20 pulgadas
