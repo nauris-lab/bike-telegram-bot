@@ -385,7 +385,12 @@ def main():
         print("Первый запуск: запоминаю текущие объявления БЕЗ отправки.")
 
     stats = {"reserved": 0, "not_a_bike": 0, "accessory": 0, "price": 0, "wheel": 0}
-    fresh = []
+    fresh = []        # [(id, текст, картинка)] — в память пока НЕ записаны
+    queued = set()    # id, уже поставленные в очередь в этом прогоне
+
+    def remember(item_id):
+        seen_set.add(item_id)
+        seen.append(item_id)
 
     session = requests.Session()
     for query in searches:
@@ -393,35 +398,48 @@ def main():
         new_count = 0
         for it in items:
             item_id = it.get("id")
-            if not item_id or item_id in seen_set:
+            if not item_id or item_id in seen_set or item_id in queued:
                 continue
-            seen_set.add(item_id)
-            seen.append(item_id)
             new_count += 1
             if bootstrap:
+                remember(item_id)
                 continue
             if keep(it, stats):
-                fresh.append(build_message(it, query))
+                # Записываем в память только после успешной отправки. Иначе
+                # сбой Telegram (неверный токен, таймаут, лимит) навсегда
+                # проглотил бы объявление.
+                queued.add(item_id)
+                text, image = build_message(it, query)
+                fresh.append((item_id, text, image))
+            else:
+                remember(item_id)   # отсеяно фильтром — повторять незачем
         print(f"  «{query}» -> {len(items)} в радиусе, {new_count} новых")
         time.sleep(FETCH_DELAY)
 
     if dry_run:
         print(f"\n[dry-run] прошло фильтры: {len(fresh)}")
-        for text, img in fresh[:10]:
+        for _id, text, img in fresh[:10]:
             plain = re.sub(r"<[^>]+>", "", text).replace("\n\n", " | ")
             print("   •", plain[:150])
         print(f"\nотсеяно: {stats}")
         return
 
-    sent = 0
-    for text_html, image_url in fresh:
+    sent = failed = 0
+    for item_id, text_html, image_url in fresh:
         if send(text_html, image_url):
+            remember(item_id)
             sent += 1
+        else:
+            failed += 1   # id не сохраняем — попробуем в следующем прогоне
         time.sleep(SEND_DELAY)
 
     save_state(seen)
-    print(f"Готово. Отправлено {sent}, отсеяно {stats}, "
-          f"в памяти {len(seen[-MAX_SEEN:])} id.")
+    tail = f", отсеяно {stats}, в памяти {len(seen[-MAX_SEEN:])} id."
+    if failed:
+        print(f"Готово. Отправлено {sent}, НЕ ДОСТАВЛЕНО {failed} "
+              f"(повторим в следующем прогоне){tail}")
+    else:
+        print(f"Готово. Отправлено {sent}{tail}")
 
 
 if __name__ == "__main__":
